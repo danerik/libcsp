@@ -30,8 +30,18 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "arch/csp_time.h"
 #include "arch/csp_malloc.h"
 
-#ifdef _CSP_POSIX_
+
+
+#if defined(_CSP_WINDOWS_)
+#include <Windows.h>
+#undef interface
+#elif defined(_CSP_POSIX_)
 #include <sys/sysinfo.h>
+#error "POSIX"
+#endif
+
+#if defined(_CSP_WINDOWS_)
+static size_t get_free_memory_windows();
 #endif
 
 void csp_service_handler(csp_conn_t * conn, csp_packet_t * packet) {
@@ -76,6 +86,8 @@ void csp_service_handler(csp_conn_t * conn, csp_packet_t * packet) {
 			}
 			if (size < 32) break;
 		}
+#elif defined(_CSP_WINDOWS_)
+		size_t total = get_free_memory_windows();
 #elif defined(_CSP_POSIX_)
 		/* Read system statistics */
 		size_t total = 0;
@@ -148,3 +160,13 @@ void csp_service_handler(csp_conn_t * conn, csp_packet_t * packet) {
 		csp_buffer_free(packet);
 
 }
+
+#ifdef _CSP_WINDOWS_
+static size_t get_free_memory_windows() {
+	MEMORYSTATUSEX statex;
+	statex.dwLength = sizeof(statex);
+	GlobalMemoryStatusEx(&statex);
+	DWORDLONG freePhysicalMem = statex.ullAvailPhys;
+	return freePhysicalMem;
+}
+#endif

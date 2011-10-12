@@ -18,54 +18,20 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include <pthread.h>
+#ifndef _CSP_TIMER_HELPER_H_
+#define _CSP_TIMER_HELPER_H_
+
 #include <time.h>
 #include <sys/time.h>
-
-/* CSP includes */
-#include <csp/csp.h>
-
-#include "../csp_time.h"
-
-#ifdef _CSP_WINDOWS_
-#include <Windows.h>
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-#ifdef _CSP_WINDOWS_
-uint32_t csp_get_ms(void) {
-	return (uint32_t)GetTickCount();
-}
-#else
-uint32_t csp_get_ms(void) {
-    struct timespec ts;
+int csp_set_timeout(struct timespec* ts, int timeout);
 
-    if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0)
-        return (uint32_t)(ts.tv_sec*1000+ts.tv_nsec/1000000);
-    else
-        return 0;
-}
+#ifdef __cplusplus
+} /* extern "C" */
 #endif
 
-uint32_t csp_get_ms_isr(void) {
-    return csp_get_ms();
-}
+#endif // _CSP_TIMER_HELPER_H_
 
-#ifdef _CSP_WINDOWS_
-uint32_t csp_get_s(void) {
-	uint32_t time_ms = csp_get_ms();
-	return time_ms/1000;
-}
-#else
-uint32_t csp_get_s(void) {
-	struct timespec ts;
-
-	if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0)
-		return (uint32_t)ts.tv_sec;
-	else
-		return 0;
-}
-#endif
-
-uint32_t csp_get_s_isr(void) {
-	return csp_get_s();
-}

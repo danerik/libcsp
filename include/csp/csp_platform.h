@@ -26,6 +26,10 @@ extern "C" {
 #endif
 
 /* Set platform endianness and OS */
+#if defined(_WIN32)
+	#define _CSP_WINDOWS_
+	#define _WIN32_WINNT 0x0501
+#endif
 #if defined(__i386__) || defined(__x86_64__) || defined(__BFIN__)
     #define _CSP_LITTLE_ENDIAN_
     #define _CSP_POSIX_

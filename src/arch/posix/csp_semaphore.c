@@ -28,10 +28,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <errno.h>
 #include <string.h>
 
+
 /* CSP includes */
 #include <csp/csp.h>
 
 #include "../csp_semaphore.h"
+#include "csp_timer_helper.h"
 
 int csp_mutex_create(csp_mutex_t * mutex) {
 	csp_debug(CSP_LOCK, "Mutex init: %p\r\n", mutex);
@@ -57,18 +59,8 @@ int csp_mutex_lock(csp_mutex_t * mutex, int timeout) {
 	csp_debug(CSP_LOCK, "Wait: %p timeout %u\r\n", mutex, timeout);
 
 	struct timespec ts;
-	if (clock_gettime(CLOCK_REALTIME, &ts))
+    if(csp_set_timeout(&ts, timeout))
 		return CSP_SEMAPHORE_ERROR;
-
-	uint32_t sec = timeout / 1000;
-	uint32_t nsec = (timeout - 1000 * sec) * 1000000;
-
-	ts.tv_sec += sec;
-
-	if (ts.tv_nsec + nsec >= 1000000000)
-		ts.tv_sec++;
-
-	ts.tv_nsec = (ts.tv_nsec + nsec) % 1000000000;
 
 	if (pthread_mutex_timedlock(mutex, &ts) == 0) {
 		return CSP_SEMAPHORE_OK;
@@ -109,20 +101,10 @@ int csp_bin_sem_wait(csp_bin_sem_handle_t * sem, int timeout) {
 	csp_debug(CSP_LOCK, "Wait: %p timeout %u\r\n", sem, timeout);
 
     struct timespec ts;
-    if (clock_gettime(CLOCK_REALTIME, &ts))
-    	return CSP_SEMAPHORE_ERROR;
-    
-    uint32_t sec = timeout / 1000;
-    uint32_t nsec = (timeout - 1000 * sec) * 1000000;
+    if(csp_set_timeout(&ts, timeout))
+		return CSP_SEMAPHORE_ERROR;
 
-    ts.tv_sec += sec;
-
-    if (ts.tv_nsec + nsec >= 1000000000)
-        ts.tv_sec++;
-
-    ts.tv_nsec = (ts.tv_nsec + nsec) % 1000000000;
-
-    if (sem_timedwait(sem, &ts) == 0) {
+    if (sem_timedwait(sem, (const struct timespec*)&ts) == 0) {
         return CSP_SEMAPHORE_OK;
     } else {
         return CSP_SEMAPHORE_ERROR;

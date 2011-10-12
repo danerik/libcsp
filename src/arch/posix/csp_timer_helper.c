@@ -18,54 +18,53 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include <pthread.h>
+#include <string.h>
 #include <time.h>
 #include <sys/time.h>
+#include <stdint.h>
 
-/* CSP includes */
-#include <csp/csp.h>
-
-#include "../csp_time.h"
+#include "csp_timer_helper.h"
 
 #ifdef _CSP_WINDOWS_
-#include <Windows.h>
+	#include <Windows.h>
 #endif
 
-#ifdef _CSP_WINDOWS_
-uint32_t csp_get_ms(void) {
-	return (uint32_t)GetTickCount();
-}
-#else
-uint32_t csp_get_ms(void) {
-    struct timespec ts;
-
-    if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0)
-        return (uint32_t)(ts.tv_sec*1000+ts.tv_nsec/1000000);
-    else
-        return 0;
-}
-#endif
-
-uint32_t csp_get_ms_isr(void) {
-    return csp_get_ms();
-}
+static void append_ms(struct timespec* ts, int ms);
 
 #ifdef _CSP_WINDOWS_
-uint32_t csp_get_s(void) {
-	uint32_t time_ms = csp_get_ms();
-	return time_ms/1000;
-}
-#else
-uint32_t csp_get_s(void) {
-	struct timespec ts;
+	int set_timeout(struct timespec* ts, int timeout) {
+		uint32_t absoluteTimeout = (uint32_t)GetTickCount() + timeout;
+		struct timespec tsTmp;
 
-	if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0)
-		return (uint32_t)ts.tv_sec;
-	else
+		memset(&tsTmp, 0, sizeof(struct timespec));
+		append_ms(&tsTmp, absoluteTimeout);
+
+		*ts = tsTmp;
 		return 0;
-}
+	}
+#else
+	int set_timeout(struct timespec* ts, int timeout) {
+		struct timespec tsTmp;
+		int ret;
+
+		if(ret = clock_gettime(CLOCK_REALTIME, &tsTmp) )
+			return ret;
+
+		append_ms(&tsTmp, timeout);
+		*ts = tsTmp;
+
+		return 0;
+	}
 #endif
 
-uint32_t csp_get_s_isr(void) {
-	return csp_get_s();
+static void append_ms(struct timespec* ts, int ms) {
+	uint32_t sec = ms / 1000;
+    uint32_t nsec = (ms - 1000 * sec) * 1000000;
+
+    ts->tv_sec += sec;
+    
+    if (ts->tv_nsec + nsec > 1000000000)
+        ts->tv_sec++;
+
+    ts->tv_nsec = (ts->tv_nsec + nsec) % 1000000000;
 }

@@ -14,9 +14,15 @@ ifndef OUTDIR
 OUTDIR = .
 endif
 MCU = at90can128
+ifeq ($(TOOLCHAIN), mingw32-)
+CC = $(TOOLCHAIN)gcc
+AR = ar
+SZ = size
+else
 CC = $(TOOLCHAIN)gcc
 AR = $(TOOLCHAIN)ar
 SZ = $(TOOLCHAIN)size
+endif
 
 ## Options common to compile, link and assembly rules
 COMMON = -DCSP_USER_CONFIG
@@ -32,7 +38,10 @@ else ifeq ($(TOOLCHAIN),bfin-linux-uclibc-)
 CFLAGS += -D_GNU_SOURCE
 else ifeq ($(TOOLCHAIN),)
 CFLAGS += -fPIC
+else ifeq ($(TOOLCHAIN),mingw32-)
+CFLAGS += -DWINDOWS
 endif
+
 CFLAGS += -Wall -Werror -Wno-unused-parameter -std=gnu99 -Os
 
 ## Assembly specific flags
@@ -59,7 +68,7 @@ SOURCES += src/csp_service_handler.c
 SOURCES += src/csp_crc32.c
 SOURCES += src/arch/$(ARCH)/csp_malloc.c
 SOURCES += src/arch/$(ARCH)/csp_queue.c
-SOURCES += src/arch/$(ARCH)/csp_semaphore.c
+#SOURCES += src/arch/$(ARCH)/csp_semaphore.c
 SOURCES += src/arch/$(ARCH)/csp_time.c
 SOURCES += src/arch/$(ARCH)/csp_thread.c
 SOURCES += src/interfaces/csp_if_lo.c
@@ -73,6 +82,10 @@ SOURCES += src/crypto/csp_xtea.c
 ifeq ($(TOOLCHAIN),)
 SOURCES += src/csp_debug.c
 SOURCES += src/interfaces/can/can_socketcan.c
+endif
+
+ifeq ($(TOOLCHAIN),mingw32-,)
+SOURCES += src/csp_debug.c
 endif
 
 ifeq ($(TOOLCHAIN),avr-)
